@@ -32,3 +32,62 @@ Furthermore, I'm going to deploy this thing! That's right, you will be able to u
 ## Component detail: Parser/loader
 
 Parse prose text from Henry David Thoreau. It can be from any author, I just chose Thoreau. [Project Gutenberg](https://www.gutenberg.org/files/205/205-0.txt) is an excellent source for public domain prose.
+
+
+## Database schema
+
+Five books by Thoreau providing 600k phrases.
+
+    select s.book, count(p.*) from phrase p join sentence s on p.sentence_id = s.id group by s.book;
+
+            book               | count
+    ---------------------------+-------
+    canoeing_in_the_wilderness |  46002
+    thoreau_journal_1          | 177759
+    thoreau_journal_2          | 212770
+    walden                     | 145538
+    walking                    |  17098
+
+Where a `phrase` is a start/end word index pair pointing to a sentence. The meter of the phrase is encoded with 0 meaning unstressed and 1 meaning stressed.
+
+    select sentence_id, start_word_index as start, end_word_index as end, meter from phrase limit 18;
+
+    sentence_id  | start | end |   meter
+    -------------+-------+-----+------------
+             596 |     0 |   6 | 1111011
+             596 |     0 |   7 | 11110111
+             596 |     0 |   8 | 111101111
+             596 |     0 |   9 | 1111011111
+             596 |     1 |   6 | 111011
+             596 |     1 |   7 | 1110111
+             596 |     1 |   8 | 11101111
+             596 |     1 |   9 | 111011111
+             596 |     2 |   3 | 1
+
+    select content from sentence where id = 596;
+
+    how could youths better learn to live than by at once trying the experiment of living
+
+So to find a couple of phrases with iambic pentameter...
+
+    select 
+      array_to_string((string_to_array(s.content, ' '))[p.start_word_index:p.end_word_index], ' ')
+    from phrase p join sentence s on p.sentence_id = s.id
+    where meter = '0101010101' limit 12;
+
+                   array_to_string
+    ---------------------------------------------
+     contains eleven acres mostly growing up
+     of the stone a nation hammers goes toward
+     are a thousand hacking at the branches of
+     the poet or the artist never yet
+     in a summer morning having taken my
+     the village after hoeing or perhaps
+     making another hole directly over it
+     the voracious caterpillar when transformed
+     to the sick the doctors wisely recommend
+     hyde the tinker standing on the gallows was
+     and the conversation are about costume
+     only divided states and churches it divides
+
+And the poems just write themselves ;-)
